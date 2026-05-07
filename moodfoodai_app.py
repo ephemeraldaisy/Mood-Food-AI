@@ -69,8 +69,12 @@ if user_input:
             # [핵심] Representation Space 개념을 프롬프트에 주입하여 유사 메뉴 제외
             prompt = f"""
             좌표 [{SKKU_LAT}, {SKKU_LON}] 근처에서 기분이 '{user_input}'일 때 메뉴 1개를 [음식명] 형식으로 추천해줘.
-            절대 추천 금지 리스트: [{avoid_list}]
-            위 리스트에 있는 음식과 의미론적으로 유사하거나(예: 포케와 샐러드볼) 주재료가 겹치는 음식도 절대 제외해줘.
+            ⚠️ [절대 금지 규칙] ⚠️
+            1. 다음 리스트에 포함된 메뉴는 죽어도 추천하지 마: [{avoid_list}]
+            2. '물냉면'이 금지라면 비빔냉면, 평양냉면, 밀면 등 모든 종류의 '냉면'과 '차가운 면 요리'를 함께 금지해.
+            3. 비슷한 재료(메밀면, 육수)를 사용하는 요리도 추천에서 제외해.
+            4. 이 규칙을 어기면 안 돼. 다른 맛있는 대안을 찾아줘.
+                
             """
             
             response = model.generate_content(prompt)
@@ -78,23 +82,29 @@ if user_input:
             match = re.search(r"\[(.*?)\]", res_text)
             food_keyword = match.group(1) if match else "추천 메뉴"
 
-            with col1:
-                st.write("---")
-                st.success(f"### 🍱 추천: {food_keyword}")
-                st.write(res_text)
-                
-                # 피드백 버튼
-                f_col1, f_col2 = st.columns(2)
-                with f_col1:
-                    if st.button("👍 좋아요"):
-                        st.toast("취향을 기억하겠습니다! ✨")
-                with f_col2:
-                    if st.button("👎 싫어요"):
-                        if food_keyword not in st.session_state.disliked_foods:
-                            st.session_state.disliked_foods.append(food_keyword)
-                        st.toast(f"'{food_keyword}'와 유사한 메뉴를 앞으로 제외합니다.")
-                        time.sleep(1)
-                        st.rerun() # 즉시 재실행하여 새로운 메뉴 추천
+            # 피드백 버튼 섹션
+            f_col1, f_col2 = st.columns(2)
+            
+            with f_col1:
+                if st.button("👍 좋아요", use_container_width=True):
+                    # 좋아요 피드백 문구
+                    st.toast("사용자님의 취향 저격 성공! 이 기분엔 이런 음식을 더 자주 찾아볼게요. ✨", icon="😍")
+                    # (선택 사항) 나중에 '좋아요' 한 음식 리스트를 따로 저장할 수도 있습니다.
+            
+            with f_col2:
+                if st.button("👎 싫어요", use_container_width=True):
+                    # 싫어요 피드백 문구
+                    if food_keyword not in st.session_state.disliked_foods:
+                        st.session_state.disliked_foods.append(food_keyword)
+                    
+                    # 물냉면 사태 방지를 위한 강력한 안내 멘트
+                    st.toast(f"'{food_keyword}'(와)과 비슷한 스타일은 이제 안 보여드릴게요. 메뉴판에서 지우는 중... 🧹", icon="🚫")
+                    
+                    # 사용자에게 더 확실한 시각적 피드백 제공
+                    st.error(f"⚠️ '{food_keyword}'가 제외 리스트에 추가되었습니다. 새로운 메뉴를 가져옵니다!")
+                    
+                    time.sleep(1.5) # 메시지를 읽을 시간 확보
+                    st.rerun() # 즉시 재실행하여 새로운 메뉴 추천
 
         except Exception as e:
             st.error(f"에러 발생: {e}")
