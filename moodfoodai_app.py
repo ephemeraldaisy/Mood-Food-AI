@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_geolocation import streamlit_geolocation
 import google.generativeai as genai
 import folium
 from streamlit_folium import st_folium
@@ -34,7 +35,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🌍 10가지 기분별 메뉴 추천 🍱")
+st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
 
 # 2. 기분 및 위치 설정
 VALID_MODEL = "models/gemini-flash-latest"
