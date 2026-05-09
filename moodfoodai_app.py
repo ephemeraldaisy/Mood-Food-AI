@@ -93,11 +93,12 @@ if st.session_state.current_mood:
                 avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                 
                 model = genai.GenerativeModel(VALID_MODEL)
+                
                 prompt = f"""
                 사용자의 현재 위치 [{curr_lat}, {curr_lon}]에서 '도보 15분(1km) 이내'에 있는 실제 식당과 메뉴를 추천해줘.
                 
                 형식: [식당명 | 메뉴명]
-                기분: {mood}
+                기분: {mood}에 어울리는 음식
                 제외: [{avoid_str}]
                 
                 반드시 현재 좌표와 매우 가까운 지점을 선택하고, 답변에 식당의 대략적인 위치 정보(예: XX역 3번 출구 근처)를 포함해줘.
@@ -115,6 +116,13 @@ if st.session_state.current_mood:
                         place_name, menu_name = map(str.strip, raw_info.split("|"))
                     else:
                         place_name, menu_name = "인근 맛집", raw_info
+                    # 결과를 세션에 저장
+                st.session_state.recommendation_result = {
+                    "place": place_name, # 여기서 place_name을 사용합니다.
+                    "menu": menu_name,
+                    "full_text": res_text
+                    "user_coords": (curr_lat, curr_lon)
+                }
                 else:
                     place_name, menu_name = "인근 맛집", "맛있는 요리"
                 
@@ -124,14 +132,8 @@ if st.session_state.current_mood:
                     st.session_state.recent_history.append(full_rec)
                     if len(st.session_state.recent_history) > 5:
                         st.session_state.recent_history.pop(0)
-
-                # 결과를 세션에 저장
-                st.session_state.recommendation_result = {
-                    "place": place_name, # 여기서 place_name을 사용합니다.
-                    "menu": menu_name,
-                    "full_text": res_text
-                    "user_coords": curr_lat, curr_lon
-                }
+                
+                
             except Exception as e:
                 # 에러 메시지를 더 구체적으로 표시
                 st.error(f"AI 응답 오류가 발생했습니다: {e}")
@@ -151,8 +153,6 @@ if st.session_state.current_mood:
             # 지도 버튼
             search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
             st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도) & 거리 확인", search_url, use_container_width=True)
-
-
             st.write("")
 
             f_col1, f_col2 = st.columns(2)
