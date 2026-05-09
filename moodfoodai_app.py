@@ -148,13 +148,13 @@ if st.session_state.current_mood:
             f_col1, f_col2 = st.columns(2)
             with f_col1:
                 if st.button("👍 좋아요", use_container_width=True):
-                    st.toast(f"사용자님의 취향 저격! {res['food']} 메모 완료! ✨", icon="😍")
+                    st.toast(f"사용자님의 취향 저격! {res['menu']} 메모 완료! ✨", icon="😍")
             
             with f_col2:
                 if st.button("👎 싫어요", use_container_width=True):
-                    if res['food'] not in st.session_state.disliked_foods:
+                    if res['menu'] not in st.session_state.disliked_foods:
                         st.session_state.disliked_foods.append(res['food'])
-                    st.toast(f"'{res['food']}' 제외 완료. 다른 메뉴를 찾아볼게요!", icon="🧹")
+                    st.toast(f"'{res['menu']}' 제외 완료. 다른 메뉴를 찾아볼게요!", icon="🧹")
                     st.session_state.recommendation_result = None 
                     time.sleep(1)
                     st.rerun()
