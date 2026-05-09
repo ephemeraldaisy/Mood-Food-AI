@@ -117,14 +117,16 @@ if st.session_state.current_mood:
                     else:
                         place_name, menu_name = "인근 맛집", raw_info
                     # 결과를 세션에 저장
+
+                else:
+                    place_name, menu_name = "인근 맛집", "맛있는 요리"
+
                 st.session_state.recommendation_result = {
                     "place": place_name, # 여기서 place_name을 사용합니다.
                     "menu": menu_name,
                     "full_text": res_text,
                     "user_coords": (curr_lat, curr_lon)
                 }
-                else:
-                    place_name, menu_name = "인근 맛집", "맛있는 요리"
                 
                 # 중복 방지 기록 업데이트
                 full_rec = f"{place_name} - {menu_name}"
