@@ -87,83 +87,61 @@ if st.session_state.current_mood:
     if st.session_state.recommendation_result is None:
         with st.spinner(f"'{mood}'에 딱 맞는 메뉴를 고르고 있어요..."):
             try:
+                # 최근 기록과 금지 목록 합치기
                 avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
                 avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
+                
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                사용자의 실시간 좌표 [{curr_lat}, {curr_lon}] 인근에서 기분이 '{mood}'일 때 가기 좋은 '실제 식당'과 '추천 메뉴'를 하나 골라줘.
-                
-                반드시 아래 형식을 지켜서 답변해:
-                1. 답변 시작 부분에 [식당이름 | 대표메뉴] 형식으로 핵심 정보를 적을 것. (예: [성경만두요리전문점 | 빨간전골])
-                2. 그 아래에는 왜 그 식당의 그 메뉴가 현재 좌표와 기분에 어울리는지 다정하게 설명해줘.
-                3. 근처에 실제로 존재하는 식당이어야 해.
-                
-                제외 리스트: [{avoid_str}]
+                좌표 [{curr_lat}, {curr_lon}] 인근, 기분 '{mood}'에 맞는 실제 식당과 메뉴를 [식당명 | 메뉴명] 형식으로 하나만 추천해줘.
+                설명도 덧붙여줘. 제외: [{avoid_str}]
                 """
                 
                 response = model.generate_content(prompt)
                 res_text = response.text
                 match = re.search(r"\[(.*?)\]", res_text)
+
+                # --- [변수 이름 통일 및 정의] ---
                 if match:
                     raw_info = match.group(1)
-                    # [에러 방지!] | 기호가 있는지 확인하고 안전하게 분리
                     if "|" in raw_info:
-                        p_name, m_name = map(str.strip, raw_info.split("|"))
+                        # 변수 이름을 'place_name'으로 정확히 지정
+                        place_name, menu_name = map(str.strip, raw_info.split("|"))
                     else:
-                        # | 가 없다면 통째로 메뉴명으로 간주하고 장소는 '인근 맛집'으로 설정
-                        p_name, m_name = "인근 맛집", raw_info
-                    
-                    # 딕셔너리 생성 시 'place'와 'menu' 키를 확실히 생성
-                    st.session_state.recommendation_result = {
-                        "place": p_name,
-                        "menu": m_name,
-                        "full_text": res_text
-                    }
+                        place_name, menu_name = "인근 맛집", raw_info
+                else:
+                    place_name, menu_name = "인근 맛집", "맛있는 요리"
                 
-                    
-                    # 최근 기록에는 "식당명 - 메뉴명" 형태로 저장하여 중복 방지
-                    full_recommendation = f"{place_name} - {menu_name}"
-                    if full_recommendation not in st.session_state.recent_history:
-                        st.session_state.recent_history.append(full_recommendation)
-                        if len(st.session_state.recent_history) > 5:
-                            st.session_state.recent_history.pop(0)
-                
-                    # 결과를 세션에 저장
-                    st.session_state.recommendation_result = {
-                        "place": place_name,
-                        "menu": menu_name,
-                        "full_text": res_text
-                    }
-        
-                food_keyword = match.group(1) if match else "맛있는 음식"
+                # 중복 방지 기록 업데이트
+                full_rec = f"{place_name} - {menu_name}"
+                if full_rec not in st.session_state.recent_history:
+                    st.session_state.recent_history.append(full_rec)
+                    if len(st.session_state.recent_history) > 5:
+                        st.session_state.recent_history.pop(0)
 
-                #history 반영
-                if food_keyword not in st.session_state.recent_history:
-                    st.session_state.recent_history.append(food_keyword)
-
-                #Queue of 5
-                if len(st.session_state.recent_history) > 5:
-                    st.session_state.recent_history.pop(0) #Delete the oldest
-                
+                # 결과를 세션에 저장
                 st.session_state.recommendation_result = {
-                    "food": food_keyword,
-                    "text": res_text
+                    "place": place_name, # 여기서 place_name을 사용합니다.
+                    "menu": menu_name,
+                    "full_text": res_text
                 }
             except Exception as e:
-                st.error(f"AI 응답 오류: {e}")
+                # 에러 메시지를 더 구체적으로 표시
+                st.error(f"AI 응답 오류가 발생했습니다: {e}")
 
+    # 결과 화면 출력
     if st.session_state.recommendation_result:
         res = st.session_state.recommendation_result
         with col1:
             st.write("---")
-            # 식당명과 메뉴명을 각각 다른 스타일로 표시
             st.success(f"### 📍 {res['place']}")
             st.info(f"🍴 **추천 메뉴:** {res['menu']}")
             st.write(res['full_text'])
             
-            # 피드백 버튼 아래에 추가
+            # 지도 버튼
             search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
-            st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도)", search_url)
+            st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도)", search_url, use_container_width=True)
+
 
             st.write("")
 
