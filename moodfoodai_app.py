@@ -91,17 +91,40 @@ if st.session_state.current_mood:
                 avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                좌표 [{curr_lat}, {curr_lon}] 인근, 기분 '{mood}'에 맞는 메뉴 1개를 [음식명] 형식으로 답변해줘.
+                사용자의 실시간 좌표 [{curr_lat}, {curr_lon}] 인근에서 기분이 '{mood}'일 때 가기 좋은 '실제 식당'과 '추천 메뉴'를 하나 골라줘.
                 
-                🚫 [중복 및 반복 추천 절대 금지] 🚫
-                - 다음 메뉴는 최근에 이미 추천했거나 사용자가 싫어하는 메뉴이므로 절대 제외해: [{avoid_str}]
-                - '얼큰이칼국수'가 이 리스트에 있다면 비슷한 칼국수류도 피해서 완전히 새로운 장르를 추천해줘.
-                - 메뉴의 다양성을 확보해서 매번 다른 느낌의 식당을 골라줘.
+                반드시 아래 형식을 지켜서 답변해:
+                1. 답변 시작 부분에 [식당이름 | 대표메뉴] 형식으로 핵심 정보를 적을 것. (예: [성경만두요리전문점 | 빨간전골])
+                2. 그 아래에는 왜 그 식당의 그 메뉴가 현재 좌표와 기분에 어울리는지 다정하게 설명해줘.
+                3. 근처에 실제로 존재하는 식당이어야 해.
+                
+                제외 리스트: [{avoid_str}]
                 """
                 
                 response = model.generate_content(prompt)
                 res_text = response.text
                 match = re.search(r"\[(.*?)\]", res_text)
+                if match:
+                    raw_info = match.group(1) # "식당명 | 메뉴명" 형태
+                    if "|" in raw_info:
+                        place_name, menu_name = map(str.strip, raw_info.split("|"))
+                    else:
+                        place_name, menu_name = "인근 식당", raw_info
+                    
+                    # 최근 기록에는 "식당명 - 메뉴명" 형태로 저장하여 중복 방지
+                    full_recommendation = f"{place_name} - {menu_name}"
+                    if full_recommendation not in st.session_state.recent_history:
+                        st.session_state.recent_history.append(full_recommendation)
+                        if len(st.session_state.recent_history) > 5:
+                            st.session_state.recent_history.pop(0)
+                
+                    # 결과를 세션에 저장
+                    st.session_state.recommendation_result = {
+                        "place": place_name,
+                        "menu": menu_name,
+                        "full_text": res_text
+                    }
+        
                 food_keyword = match.group(1) if match else "맛있는 음식"
 
                 #history 반영
@@ -123,9 +146,17 @@ if st.session_state.current_mood:
         res = st.session_state.recommendation_result
         with col1:
             st.write("---")
-            st.success(f"### 🍱 오늘의 추천: {res['food']}")
-            st.write(res['text']) 
+            # 식당명과 메뉴명을 각각 다른 스타일로 표시
+            st.success(f"### 📍 {res['place']}")
+            st.info(f"🍴 **추천 메뉴:** {res['menu']}")
+            st.write(res['full_text'])
             
+            # 피드백 버튼 아래에 추가
+            search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
+            st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도)", search_url)
+
+            st.write("")
+
             f_col1, f_col2 = st.columns(2)
             with f_col1:
                 if st.button("👍 좋아요", use_container_width=True):
