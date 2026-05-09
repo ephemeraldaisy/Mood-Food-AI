@@ -105,11 +105,21 @@ if st.session_state.current_mood:
                 res_text = response.text
                 match = re.search(r"\[(.*?)\]", res_text)
                 if match:
-                    raw_info = match.group(1) # "식당명 | 메뉴명" 형태
+                    raw_info = match.group(1)
+                    # [에러 방지!] | 기호가 있는지 확인하고 안전하게 분리
                     if "|" in raw_info:
-                        place_name, menu_name = map(str.strip, raw_info.split("|"))
+                        p_name, m_name = map(str.strip, raw_info.split("|"))
                     else:
-                        place_name, menu_name = "인근 식당", raw_info
+                        # | 가 없다면 통째로 메뉴명으로 간주하고 장소는 '인근 맛집'으로 설정
+                        p_name, m_name = "인근 맛집", raw_info
+                    
+                    # 딕셔너리 생성 시 'place'와 'menu' 키를 확실히 생성
+                    st.session_state.recommendation_result = {
+                        "place": p_name,
+                        "menu": m_name,
+                        "full_text": res_text
+                    }
+                
                     
                     # 최근 기록에는 "식당명 - 메뉴명" 형태로 저장하여 중복 방지
                     full_recommendation = f"{place_name} - {menu_name}"
