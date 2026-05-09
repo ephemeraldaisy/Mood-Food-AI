@@ -120,7 +120,7 @@ if st.session_state.current_mood:
                 st.session_state.recommendation_result = {
                     "place": place_name, # 여기서 place_name을 사용합니다.
                     "menu": menu_name,
-                    "full_text": res_text
+                    "full_text": res_text,
                     "user_coords": (curr_lat, curr_lon)
                 }
                 else:
