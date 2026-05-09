@@ -3,3 +3,4 @@ google-generativeai
 folium
 streamlit-folium
 streamlit-geolocation
+geopy
