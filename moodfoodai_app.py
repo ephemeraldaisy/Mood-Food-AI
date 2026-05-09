@@ -5,6 +5,7 @@ import folium
 from streamlit_folium import st_folium
 import re
 import time
+from geopy.distance import geodesic
 
 # 1. 환경 설정
 st.set_page_config(page_title="Mood Food AI", layout="wide", page_icon="🍱")
@@ -85,7 +86,7 @@ if st.session_state.current_mood:
     mood = st.session_state.current_mood
     
     if st.session_state.recommendation_result is None:
-        with st.spinner(f"'{mood}'에 딱 맞는 메뉴를 고르고 있어요..."):
+        with st.spinner(f"'{mood}'에 딱 맞는 1km 이내 맛집을 찾는 중..."):
             try:
                 # 최근 기록과 금지 목록 합치기
                 avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
@@ -93,8 +94,13 @@ if st.session_state.current_mood:
                 
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                좌표 [{curr_lat}, {curr_lon}] 인근, 기분 '{mood}'에 맞는 실제 식당과 메뉴를 [식당명 | 메뉴명] 형식으로 하나만 추천해줘.
-                설명도 덧붙여줘. 제외: [{avoid_str}]
+                사용자의 현재 위치 [{curr_lat}, {curr_lon}]에서 '도보 15분(1km) 이내'에 있는 실제 식당과 메뉴를 추천해줘.
+                
+                형식: [식당명 | 메뉴명]
+                기분: {mood}
+                제외: [{avoid_str}]
+                
+                반드시 현재 좌표와 매우 가까운 지점을 선택하고, 답변에 식당의 대략적인 위치 정보(예: XX역 3번 출구 근처)를 포함해줘.
                 """
                 
                 response = model.generate_content(prompt)
@@ -124,6 +130,7 @@ if st.session_state.current_mood:
                     "place": place_name, # 여기서 place_name을 사용합니다.
                     "menu": menu_name,
                     "full_text": res_text
+                    "user_coords": (curr_lat, curr_lon)
                 }
             except Exception as e:
                 # 에러 메시지를 더 구체적으로 표시
@@ -137,10 +144,13 @@ if st.session_state.current_mood:
             st.success(f"### 📍 {res['place']}")
             st.info(f"🍴 **추천 메뉴:** {res['menu']}")
             st.write(res['full_text'])
+
+            st.warning(f"🏃‍♂️ **현재 위치에서 1km 이내 (도보 권장)**")
+            st.write(res['full_text'])
             
             # 지도 버튼
             search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
-            st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도)", search_url, use_container_width=True)
+            st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도) & 거리 확인", search_url, use_container_width=True)
 
 
             st.write("")
