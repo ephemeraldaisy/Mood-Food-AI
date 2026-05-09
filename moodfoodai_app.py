@@ -36,10 +36,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
+# --- 실시간 위치 가져오기 ---
+with st.sidebar:
+    st.write("### 🌍 위치 설정")
+    location = streamlit_geolocation()
+    
+    # 위치 정보가 있으면 가변 좌표 사용, 없으면 성균관대 고정 좌표 사용
+    if location['latitude'] and location['longitude']:
+        curr_lat = location['latitude']
+        curr_lon = location['longitude']
+        st.success(f"현재 위치 감지: {curr_lat:.4f}, {curr_lon:.4f}")
+    else:
+        curr_lat, curr_lon = 37.2937156, 126.974337 # 기본값 (성균관대)
+        st.warning("위치 권한을 허용해주세요. 기본값(성균관대)으로 설정됩니다.")
+
+# --- 지도 및 추천 로직에 좌표 반영 ---
+with col2:
+    st.write("### 📍 내 주변 맛집 지도")
+    # 감지된 실시간 좌표로 지도 중심 설정
+    m = folium.Map(location=[curr_lat, curr_lon], zoom_start=15)
+    folium.Marker([curr_lat, curr_lon], popup="현재 위치", icon=folium.Icon(color='red')).add_to(m)
+    st_folium(m, width=600, height=450, key="dynamic_map")
+
 
 # 2. 기분 및 위치 설정
 VALID_MODEL = "models/gemini-flash-latest"
-SKKU_LAT, SKKU_LON = 37.2937156, 126.974337
+
 mood_map = {
     "🔥": "스트레스", "😔": "우울", "🧠": "집중 필요", "🥳": "판타스틱",
     "😴": "졸림", "😤": "화남", "🥗": "다이어트 중", "😭": "속상함",
@@ -74,7 +96,11 @@ if st.session_state.current_mood:
             try:
                 avoid_list = ", ".join(st.session_state.disliked_foods) if st.session_state.disliked_foods else "없음"
                 model = genai.GenerativeModel(VALID_MODEL)
-                prompt = f"좌표 [{SKKU_LAT}, {SKKU_LON}] 근처, 기분 '{mood}'에 맞는 메뉴 1개를 [음식명] 형식으로 추천해줘. 금지: [{avoid_list}] 및 유사메뉴."
+                prompt = f"""
+                사용자의 실시간 좌표 [{curr_lat}, {curr_lon}] 인근에서 기분이 '{mood}'일 때 추천 메뉴 1개를 [음식명] 형식으로 답변해줘.
+                근처에 실제로 있을 법한 식당 메뉴를 고려해줘.
+                제외 리스트: [{avoid_list}]
+                """
                 
                 response = model.generate_content(prompt)
                 res_text = response.text
