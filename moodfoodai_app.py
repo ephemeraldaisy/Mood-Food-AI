@@ -49,6 +49,25 @@ with st.sidebar:
     else:
         curr_lat, curr_lon = 37.2937156, 126.974337 # 기본값 (성균관대)
         st.warning("위치 권한을 허용해주세요. 기본값(성균관대)으로 설정됩니다.")
+        
+#Define col1 and col2 HERE. 
+col1, col2 = st.columns([1, 1.2])
+
+#Use col1 and col2 from here 
+# 2. 기분 버튼 섹션
+with col1:
+    st.subheader("지금 기분은 어떠신가요?")
+    items = list(mood_map.items())
+    for i in range(2):
+        btn_cols = st.columns(5)
+        for j in range(5):
+            idx = i * 5 + j
+            if idx < len(items):
+                emoji, meaning = items[idx]
+                # 버튼을 누르면 세션 상태에 저장
+                if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
+                    st.session_state.current_mood = meaning
+                    st.session_state.recommendation_result = None # 새로운 기분일 땐 결과 초기화
 
 # --- 지도 및 추천 로직에 좌표 반영 ---
 with col2:
@@ -67,23 +86,6 @@ mood_map = {
     "😴": "졸림", "😤": "화남", "🥗": "다이어트 중", "😭": "속상함",
     "😷": "감기 기운", "🥵": "열이 남"
 }
-
-col1, col2 = st.columns([1, 1.2])
-
-# 2. 기분 버튼 섹션
-with col1:
-    st.subheader("지금 기분은 어떠신가요?")
-    items = list(mood_map.items())
-    for i in range(2):
-        btn_cols = st.columns(5)
-        for j in range(5):
-            idx = i * 5 + j
-            if idx < len(items):
-                emoji, meaning = items[idx]
-                # 버튼을 누르면 세션 상태에 저장
-                if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
-                    st.session_state.current_mood = meaning
-                    st.session_state.recommendation_result = None # 새로운 기분일 땐 결과 초기화
 
 # 3. 메뉴 추천 및 결과 표시 로직
 # 세션에 기분이 저장되어 있다면 결과를 보여줍니다.
