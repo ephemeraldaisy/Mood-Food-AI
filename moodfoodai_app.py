@@ -23,9 +23,9 @@ if 'current_mood' not in st.session_state:
 if 'recommendation_result' not in st.session_state:
     st.session_state.recommendation_result = None
 if 'recent_history' not in st.session_state:
-    st.session_state.recent_history = [] #최근 5개 추천 결과 저장
+    st.session_state.recent_history = [] 
 
-# 3. [에러 해결!] 기분 데이터 정의를 위로 올렸습니다.
+# 3. 기분 데이터 정의
 mood_map = {
     "🔥": "스트레스", "😔": "우울", "🧠": "집중 필요", "🥳": "판타스틱",
     "😴": "졸림", "😤": "화남", "🥗": "다이어트 중", "😭": "속상함",
@@ -72,7 +72,7 @@ with col1:
                 emoji, meaning = items[idx]
                 if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = meaning
-                    st.session_state.recommendation_result = None # 새로운 기분일 땐 결과 초기화
+                    st.session_state.recommendation_result = None 
 
 # 7. 지도 표시 섹션 (col2)
 with col2:
@@ -101,62 +101,60 @@ if st.session_state.current_mood:
                 기분: {mood}에 어울리는 음식
                 제외: [{avoid_str}]
                 
-                반드시 현재 좌표와 매우 가까운 지점을 선택하고, 답변에 식당의 대략적인 위치 정보(예: XX역 3번 출구 근처)를 포함해줘.
+                반드시 현재 좌표와 매우 가까운 지점을 선택하고, 답변에 식당의 대략적인 위치 정보(예: XX역 3번 출구 근처)와 
+                사용자 위치로부터의 예상 도보 소요 시간을 포함해줘.
                 """
                 
                 response = model.generate_content(prompt)
                 res_text = response.text
                 match = re.search(r"\[(.*?)\]", res_text)
 
-                # --- [변수 이름 통일 및 정의] ---
                 if match:
                     raw_info = match.group(1)
                     if "|" in raw_info:
-                        # 변수 이름을 'place_name'으로 정확히 지정
                         place_name, menu_name = map(str.strip, raw_info.split("|"))
                     else:
                         place_name, menu_name = "인근 맛집", raw_info
-                    # 결과를 세션에 저장
-
                 else:
                     place_name, menu_name = "인근 맛집", "맛있는 요리"
 
+                # 결과를 세션에 저장 (딕셔너리 구조)
                 st.session_state.recommendation_result = {
-                    "place": place_name, # 여기서 place_name을 사용합니다.
+                    "place": place_name,
                     "menu": menu_name,
                     "full_text": res_text,
                     "user_coords": (curr_lat, curr_lon)
                 }
                 
-                # 중복 방지 기록 업데이트
+                # 중복 방지 기록 업데이트 (식당-메뉴 결합)
                 full_rec = f"{place_name} - {menu_name}"
                 if full_rec not in st.session_state.recent_history:
                     st.session_state.recent_history.append(full_rec)
                     if len(st.session_state.recent_history) > 5:
                         st.session_state.recent_history.pop(0)
                 
-                
             except Exception as e:
-                # 에러 메시지를 더 구체적으로 표시
                 st.error(f"AI 응답 오류가 발생했습니다: {e}")
 
-    # 결과 화면 출력
+    # --- 결과 화면 출력 (중복 제거 버전) ---
     if st.session_state.recommendation_result:
         res = st.session_state.recommendation_result
         with col1:
             st.write("---")
             st.success(f"### 📍 {res['place']}")
             st.info(f"🍴 **추천 메뉴:** {res['menu']}")
-            st.write(res['full_text'])
-
+            
+            # 도보 거리 안내와 AI 설명을 순서대로 배치
             st.warning(f"🏃‍♂️ **현재 위치에서 1km 이내 (도보 권장)**")
-            st.write(res['full_text'])
+            st.write(res['full_text']) # 멘트는 여기서 한 번만 출력됩니다.
             
             # 지도 버튼
             search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
             st.link_button(f"🔗 {res['place']} 길찾기 (네이버 지도) & 거리 확인", search_url, use_container_width=True)
-            st.write("")
+            
+            st.write("") # 간격 조절
 
+            # 피드백 버튼
             f_col1, f_col2 = st.columns(2)
             with f_col1:
                 if st.button("👍 좋아요", use_container_width=True):
@@ -175,5 +173,4 @@ if st.session_state.current_mood:
 if st.session_state.disliked_foods:
     with st.expander("🚫 현재 제외된 메뉴 리스트"):
         st.write(", ".join(st.session_state.disliked_foods))
-
 
