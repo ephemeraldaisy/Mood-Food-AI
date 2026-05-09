@@ -130,7 +130,7 @@ if st.session_state.current_mood:
                     "place": place_name, # 여기서 place_name을 사용합니다.
                     "menu": menu_name,
                     "full_text": res_text
-                    "user_coords": (curr_lat, curr_lon)
+                    "user_coords": curr_lat, curr_lon
                 }
             except Exception as e:
                 # 에러 메시지를 더 구체적으로 표시
