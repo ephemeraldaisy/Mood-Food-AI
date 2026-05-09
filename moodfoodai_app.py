@@ -153,7 +153,7 @@ if st.session_state.current_mood:
             with f_col2:
                 if st.button("👎 싫어요", use_container_width=True):
                     if res['menu'] not in st.session_state.disliked_foods:
-                        st.session_state.disliked_foods.append(res['food'])
+                        st.session_state.disliked_foods.append(res['menu'])
                     st.toast(f"'{res['menu']}' 제외 완료. 다른 메뉴를 찾아볼게요!", icon="🧹")
                     st.session_state.recommendation_result = None 
                     time.sleep(1)
