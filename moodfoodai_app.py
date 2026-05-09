@@ -21,6 +21,8 @@ if 'current_mood' not in st.session_state:
     st.session_state.current_mood = None
 if 'recommendation_result' not in st.session_state:
     st.session_state.recommendation_result = None
+if 'recent_history' not in st.session_state:
+    st.session_state.recent_history = [] #최근 5개 추천 결과 저장
 
 # 3. [에러 해결!] 기분 데이터 정의를 위로 올렸습니다.
 mood_map = {
@@ -85,18 +87,30 @@ if st.session_state.current_mood:
     if st.session_state.recommendation_result is None:
         with st.spinner(f"'{mood}'에 딱 맞는 메뉴를 고르고 있어요..."):
             try:
-                avoid_list = ", ".join(st.session_state.disliked_foods) if st.session_state.disliked_foods else "없음"
+                avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
+                avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                사용자의 실시간 좌표 [{curr_lat}, {curr_lon}] 인근에서 기분이 '{mood}'일 때 추천 메뉴 1개를 [음식명] 형식으로 답변해줘.
-                근처에 실제로 있을 법한 식당 메뉴를 고려해줘.
-                제외 리스트: [{avoid_list}]
+                좌표 [{curr_lat}, {curr_lon}] 인근, 기분 '{mood}'에 맞는 메뉴 1개를 [음식명] 형식으로 답변해줘.
+                
+                🚫 [중복 및 반복 추천 절대 금지] 🚫
+                - 다음 메뉴는 최근에 이미 추천했거나 사용자가 싫어하는 메뉴이므로 절대 제외해: [{avoid_str}]
+                - '얼큰이칼국수'가 이 리스트에 있다면 비슷한 칼국수류도 피해서 완전히 새로운 장르를 추천해줘.
+                - 메뉴의 다양성을 확보해서 매번 다른 느낌의 식당을 골라줘.
                 """
                 
                 response = model.generate_content(prompt)
                 res_text = response.text
                 match = re.search(r"\[(.*?)\]", res_text)
                 food_keyword = match.group(1) if match else "맛있는 음식"
+
+                #history 반영
+                if food_keyword not in st.session_state.recent_history:
+                    st.session_state.recent_history.append(food_keyword)
+
+                #Queue of 5
+                if len(st.session_state.recent_history) > 5:
+                    st.session_state.recent_history.pop(0) #Delete the oldest
                 
                 st.session_state.recommendation_result = {
                     "food": food_keyword,
@@ -130,3 +144,5 @@ if st.session_state.current_mood:
 if st.session_state.disliked_foods:
     with st.expander("🚫 현재 제외된 메뉴 리스트"):
         st.write(", ".join(st.session_state.disliked_foods))
+
+
