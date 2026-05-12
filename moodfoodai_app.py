@@ -37,7 +37,19 @@ VALID_MODEL = "models/gemini-flash-latest"
 # 스타일 설정
 st.markdown("""
     <style>
-        .stButton>button { border-radius: 12px; height: 3em; font-size: 18px !important; }
+        /* 버튼 내부 글자 크기 및 줄바꿈 설정 */
+        .stButton>button {
+            border-radius: 12px;
+            height: 4.5em !important; /* 높이를 살짝 키움 */
+            font-size: 14px !important;
+            line-height: 1.2 !important;
+            white-space: pre-line !important; /* \n(줄바꿈)을 인식하게 함 */
+        }
+        /* 마우스를 올렸을 때 강조 효과 */
+        .stButton>button:hover {
+            border: 2px solid #FFD93B !important;
+            color: #FFD93B !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -81,6 +93,8 @@ with col1:
             idx = i * 5 + j
             if idx < len(items):
                 emoji, meaning = items[idx]
+
+                button_label = f"{emoji}\n{meaning}"
                 if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = meaning
                     st.session_state.recommendation_result = None 
