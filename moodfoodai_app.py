@@ -106,7 +106,7 @@ col1, col2 = st.columns([1, 1.2])
 # 6. 기분 버튼 섹션 (col1)
 with col1:
     st.subheader("지금 기분은 어떠신가요?")
-    items = list(mood_map.items())
+    items = list(mood_data.items())
     for i in range(2):
         btn_cols = st.columns(5)
         for j in range(5):
