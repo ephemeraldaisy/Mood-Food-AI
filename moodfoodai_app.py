@@ -115,9 +115,10 @@ with col1:
                 emoji, meaning = items[idx]
                 #아이콘과 설명을 줄바꿈(\n)으로 연결 
                 button_label = f"{emoji}\n{meaning}"
+                
                 if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
-                    st.session_state.current_mood = meaning
-                    st.session_state.bg_color = mood_colors.get(meaning, "#0E1117")
+                    st.session_state.current_mood = info['meaning']
+                    st.session_state.bg_color = info['color']
                     st.session_state.recommendation_result = None 
                     st.rerun()
 
