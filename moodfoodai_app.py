@@ -30,7 +30,7 @@ mood_data = {
 
 # 2. 세션 상태 초기화
 if 'bg_color' not in st.session_state:
-    st.session_state.bg_color = "#0E1117" # 기본 다크모드 배경색
+    st.session_state.bg_color = "#0E1117" 
 if 'disliked_foods' not in st.session_state:
     st.session_state.disliked_foods = []
 if 'current_mood' not in st.session_state:
@@ -40,27 +40,22 @@ if 'recommendation_result' not in st.session_state:
 if 'recent_history' not in st.session_state:
     st.session_state.recent_history = [] 
 
-# 3. 배경색과 버튼 줄바꿈, 스타일 설정
+# 3. 스타일 설정 함수
 def apply_custom_style(hex_code):
     st.markdown(f"""
         <style>
-        /* 앱 전체 배경색 설정 (투명도 25% 적용으로 가독성 확보) */
         .stApp {{
             background-color: {hex_code}40; 
             transition: background-color 0.8s ease;
         }}
-        
-        /* 버튼 내부 스타일: 줄바꿈 허용 및 폰트 조절 */
         .stButton>button {{
             border-radius: 15px;
-            height: 5em !important;
-            white-space: pre-line !important; /* \n 기호를 줄바꿈으로 인식 */
+            height: 5.5em !important;
+            white-space: pre-line !important; 
             font-size: 16px !important;
             line-height: 1.3 !important;
             border: 1px solid rgba(255,255,255,0.1);
         }}
-        
-        /* 호버 시 효과 */
         .stButton>button:hover {{
             border: 1px solid white !important;
             transform: scale(1.02);
@@ -75,28 +70,24 @@ VALID_MODEL = "models/gemini-flash-latest"
 
 st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
 
-# 4. 위치 설정 (사이드바 - 자동 & 수동 혼합)
+# 4. 위치 설정 (사이드바)
 with st.sidebar:
     st.write("### 🌍 위치 설정")
-    
-    # [수동 입력 추가] GPS 오차 대비
     manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요", placeholder="예: 혜화역, 성균관대 정문")
-    
     st.write("---")
     st.write("🛰️ 자동 GPS 감지")
     location = streamlit_geolocation()
     
-    # 위치 결정 로직: 수동 입력 우선 -> 자동 GPS -> 기본값 순서
     if manual_address:
         location_context = manual_address
-        curr_lat, curr_lon = 37.2937156, 126.974337 # 좌표는 기본값 유지 (수동 입력시 텍스트 중심 추천)
+        curr_lat, curr_lon = 37.2937156, 126.974337
         st.info(f"검색어 기반 추천: {manual_address}")
     elif location['latitude'] and location['longitude']:
         curr_lat, curr_lon = location['latitude'], location['longitude']
         location_context = f"좌표 [{curr_lat}, {curr_lon}]"
         st.success(f"현재 GPS 감지 완료")
     else:
-        curr_lat, curr_lon = 37.2937156, 126.974337 # 기본값
+        curr_lat, curr_lon = 37.2937156, 126.974337
         location_context = "성균관대 자연과학캠퍼스 근처"
         st.warning("위치를 입력하거나 GPS를 허용해주세요.")
 
@@ -112,11 +103,11 @@ with col1:
         for j in range(5):
             idx = i * 5 + j
             if idx < len(items):
-                emoji, meaning = items[idx]
-                #아이콘과 설명을 줄바꿈(\n)으로 연결 
-                button_label = f"{emoji}\n{meaning}"
+                emoji, info = items[idx] # info로 데이터를 받습니다.
+                button_label = f"{emoji}\n{info['meaning']}" # 이모지 + 이름 결합
                 
-                if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
+                # 버튼 라벨에 button_label을 적용하고, 로직에서 info를 사용합니다.
+                if btn_cols[j].button(button_label, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = info['meaning']
                     st.session_state.bg_color = info['color']
                     st.session_state.recommendation_result = None 
@@ -140,16 +131,11 @@ if st.session_state.current_mood:
                 avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                 
                 model = genai.GenerativeModel(VALID_MODEL)
-                
-                # 프롬프트에 위치 맥락(location_context) 반영
                 prompt = f"""
                 사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 실제 식당과 메뉴를 추천해줘.
-                
                 형식: [식당명 | 메뉴명]
                 기분: {mood}에 어울리는 음식
                 제외: [{avoid_str}]
-                
-                반드시 위치와 매우 가까운 실제 식당을 선택하고, 답변에 위치 정보와 도보 소요 시간을 포함해줘.
                 """
                 
                 response = model.generate_content(prompt)
@@ -177,7 +163,6 @@ if st.session_state.current_mood:
             except Exception as e:
                 st.error(f"AI 응답 오류: {e}")
 
-    # 결과 화면 출력
     if st.session_state.recommendation_result:
         res = st.session_state.recommendation_result
         with col1:
