@@ -132,10 +132,18 @@ if st.session_state.current_mood:
                 
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 실제 식당과 메뉴를 추천해줘.
-                형식: [식당명 | 메뉴명]
+                사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 **실제로 운영 중인 유명 식당**을 추천해줘.
+
+                ⚠️ [중요 규칙] ⚠️
+                1. **지어낸 이름 금지**: 학습 데이터상 확실히 존재하는 식당만 추천해. 만약 특정 식당이 불확실하다면, 해당 지역의 누구나 아는 '유명 체인점'이나 '랜드마크 맛집'을 추천해.
+                2. **정확한 명칭**: 네이버 지도나 구글 지도에서 검색했을 때 바로 나오는 정확한 식당 이름을 사용해.
+                3. **검색 확인**: 추천하는 식당이 {location_context} 근처에 있는지 공간적으로 다시 한번 확인해.
+                
+                형식: [정확한 식당이름 | 대표메뉴]
                 기분: {mood}에 어울리는 음식
                 제외: [{avoid_str}]
+                
+                답변에 "이 식당은 현재 위치에서 어느 방향으로 몇 분 거리인지"와 "대표 메뉴의 특징"을 사실에 기반해서 설명해줘.
                 """
                 
                 response = model.generate_content(prompt)
@@ -172,7 +180,7 @@ if st.session_state.current_mood:
             st.warning(f"🏃‍♂️ **검색 위치에서 1km 이내 (도보 권장)**")
             st.write(res['full_text'])
             
-            search_url = f"https://map.naver.com/v5/search/{res['place']} {res['menu']}"
+            search_url = f"https://map.naver.com/v5/search/{location_context} {res['place']}"
             st.link_button(f"🔗 {res['place']} 길찾기 & 거리 확인", search_url, use_container_width=True)
             
             st.write("")
