@@ -15,7 +15,23 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("Streamlit Cloud 설정에서 GEMINI_API_KEY를 입력해주세요.")
 
+mood_colors = {
+    "스트레스": "#FF4C33", # 강렬한 레드
+    "우울": "#607D8B",    # 차분한 그레이블루
+    "집중 필요": "#F2A2C0", # 핑크
+    "판타스틱": "#FFD93B", # 밝은 노랑
+    "졸림": "#9C27B0",    # 보라
+    "화남": "#795548",    # 갈색
+    "다이어트 중": "#4CAF50", # 그린
+    "속상함": "#2196F3",   # 블루
+    "감기 기운": "#BDBDBD", # 회색
+    "열이 남": "#FF5722"   # 오렌지레드
+}
+
 # 2. 세션 상태 초기화
+if 'bg_color' not in st.session_state:
+    st.session_state.bg_color = "#0E1117" # 기본 다크모드 배경색
+
 if 'disliked_foods' not in st.session_state:
     st.session_state.disliked_foods = []
 if 'current_mood' not in st.session_state:
@@ -31,6 +47,20 @@ mood_map = {
     "😴": "졸림", "😤": "화남", "🥗": "다이어트 중", "😭": "속상함",
     "😷": "감기 기운", "🥵": "열이 남"
 }
+
+def set_bg_color(hex_code):
+    # 배경색이 너무 진하면 글자가 안 보일 수 있으므로 
+    # 투명도를 조절한 RGBA 스타일을 추천합니다 (0.1 ~ 0.2 정도)
+    st.markdown(f"""
+        <style>
+        .stApp {{
+            background-color: {hex_code}33; /* 뒤에 33을 붙여 투명도 20% 적용 */
+            transition: background-color 0.5s ease; /* 부드러운 전환 효과 */
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+    
+set_bg_color(st.session_state.bg_color)
 
 VALID_MODEL = "models/gemini-flash-latest"
 
@@ -97,7 +127,9 @@ with col1:
                 button_label = f"{emoji}\n{meaning}"
                 if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = meaning
+                    st.session_state.bg_color = mood_colors.get(meaning, "#0E1117")
                     st.session_state.recommendation_result = None 
+                    st.rerun()
 
 # 7. 지도 표시 섹션 (col2)
 with col2:
