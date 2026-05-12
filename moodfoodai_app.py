@@ -7,7 +7,7 @@ import re
 import time
 from geopy.distance import geodesic
 
-# 1. 환경 설정
+# 1. 환경 설정, 기분별 색상 및 데이터 정의
 st.set_page_config(page_title="Mood Food AI", layout="wide", page_icon="🍱")
 
 if "GEMINI_API_KEY" in st.secrets:
@@ -15,23 +15,22 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("Streamlit Cloud 설정에서 GEMINI_API_KEY를 입력해주세요.")
 
-mood_colors = {
-    "스트레스": "#FF4C33", # 강렬한 레드
-    "우울": "#607D8B",    # 차분한 그레이블루
-    "집중 필요": "#F2A2C0", # 핑크
-    "판타스틱": "#FFD93B", # 밝은 노랑
-    "졸림": "#9C27B0",    # 보라
-    "화남": "#795548",    # 갈색
-    "다이어트 중": "#4CAF50", # 그린
-    "속상함": "#2196F3",   # 블루
-    "감기 기운": "#BDBDBD", # 회색
-    "열이 남": "#FF5722"   # 오렌지레드
+mood_data = {
+    "🔥": {"meaning": "스트레스", "color": "#FF4C33"},
+    "😔": {"meaning": "우울", "color": "#607D8B"},
+    "🧠": {"meaning": "집중 필요", "color": "#F2A2C0"},
+    "🥳": {"meaning": "판타스틱", "color": "#FFD93B"},
+    "😴": {"meaning": "졸림", "color": "#9C27B0"},
+    "😤": {"meaning": "화남", "color": "#795548"},
+    "🥗": {"meaning": "다이어트 중", "color": "#4CAF50"},
+    "😭": {"meaning": "속상함", "color": "#2196F3"},
+    "😷": {"meaning": "감기 기운", "color": "#BDBDBD"},
+    "🥵": {"meaning": "열이 남", "color": "#FF5722"}
 }
 
 # 2. 세션 상태 초기화
 if 'bg_color' not in st.session_state:
     st.session_state.bg_color = "#0E1117" # 기본 다크모드 배경색
-
 if 'disliked_foods' not in st.session_state:
     st.session_state.disliked_foods = []
 if 'current_mood' not in st.session_state:
@@ -41,47 +40,38 @@ if 'recommendation_result' not in st.session_state:
 if 'recent_history' not in st.session_state:
     st.session_state.recent_history = [] 
 
-# 3. 기분 데이터 정의
-mood_map = {
-    "🔥": "스트레스", "😔": "우울", "🧠": "집중 필요", "🥳": "판타스틱",
-    "😴": "졸림", "😤": "화남", "🥗": "다이어트 중", "😭": "속상함",
-    "😷": "감기 기운", "🥵": "열이 남"
-}
-
-def set_bg_color(hex_code):
-    # 배경색이 너무 진하면 글자가 안 보일 수 있으므로 
-    # 투명도를 조절한 RGBA 스타일을 추천합니다 (0.1 ~ 0.2 정도)
+# 3. 배경색과 버튼 줄바꿈, 스타일 설정
+def apply_custom_style(hex_code):
     st.markdown(f"""
         <style>
+        /* 앱 전체 배경색 설정 (투명도 25% 적용으로 가독성 확보) */
         .stApp {{
-            background-color: {hex_code}33; /* 뒤에 33을 붙여 투명도 20% 적용 */
-            transition: background-color 0.5s ease; /* 부드러운 전환 효과 */
+            background-color: {hex_code}40; 
+            transition: background-color 0.8s ease;
+        }}
+        
+        /* 버튼 내부 스타일: 줄바꿈 허용 및 폰트 조절 */
+        .stButton>button {{
+            border-radius: 15px;
+            height: 5em !important;
+            white-space: pre-line !important; /* \n 기호를 줄바꿈으로 인식 */
+            font-size: 16px !important;
+            line-height: 1.3 !important;
+            border: 1px solid rgba(255,255,255,0.1);
+        }}
+        
+        /* 호버 시 효과 */
+        .stButton>button:hover {{
+            border: 1px solid white !important;
+            transform: scale(1.02);
+            transition: 0.2s;
         }}
         </style>
     """, unsafe_allow_html=True)
     
-set_bg_color(st.session_state.bg_color)
+apply_custom_style(st.session_state.bg_color)
 
 VALID_MODEL = "models/gemini-flash-latest"
-
-# 스타일 설정
-st.markdown("""
-    <style>
-        /* 버튼 내부 글자 크기 및 줄바꿈 설정 */
-        .stButton>button {
-            border-radius: 12px;
-            height: 4.5em !important; /* 높이를 살짝 키움 */
-            font-size: 14px !important;
-            line-height: 1.2 !important;
-            white-space: pre-line !important; /* \n(줄바꿈)을 인식하게 함 */
-        }
-        /* 마우스를 올렸을 때 강조 효과 */
-        .stButton>button:hover {
-            border: 2px solid #FFD93B !important;
-            color: #FFD93B !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
 
@@ -123,7 +113,7 @@ with col1:
             idx = i * 5 + j
             if idx < len(items):
                 emoji, meaning = items[idx]
-
+                #아이콘과 설명을 줄바꿈(\n)으로 연결 
                 button_label = f"{emoji}\n{meaning}"
                 if btn_cols[j].button(emoji, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = meaning
