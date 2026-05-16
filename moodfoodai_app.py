@@ -25,7 +25,7 @@ mood_data = {
     "🥗": {"meaning": "다이어트 중", "color": "#4CAF50"},
     "😭": {"meaning": "속상함", "color": "#2196F3"},
     "😷": {"meaning": "감기 기운", "color": "#BDBDBD"},
-    "🥵": {"meaning": "열이 남", "color": "#FF5722"}
+    "🤒": {"meaning": "열이 남", "color": "#FF5722"}
 }
 
 # 2. 세션 상태 초기화
