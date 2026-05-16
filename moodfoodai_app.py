@@ -73,7 +73,7 @@ st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
 # 4. 위치 설정 (사이드바)
 with st.sidebar:
     st.write("### 🌍 위치 설정")
-    manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요", placeholder="예: 혜화역, 성균관대 정문")
+    manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요")
     st.write("---")
     st.write("🛰️ 자동 GPS 감지")
     location = streamlit_geolocation()
