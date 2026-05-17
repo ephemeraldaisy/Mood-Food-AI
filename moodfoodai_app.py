@@ -8,24 +8,29 @@ import time
 from geopy.distance import geodesic
 
 # 1. 환경 설정, 기분별 색상 및 데이터 정의
-st.set_page_config(page_title="Mood Food AI", layout="wide", page_icon="🍱")
+st.set_page_config(
+    page_title="내 주변 1km 기분별 맛집 추천 - Mood Food AI", 
+    layout="wide", 
+    page_icon="🍱"
+)
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
     st.error("Streamlit Cloud 설정에서 GEMINI_API_KEY를 입력해주세요.")
 
+# SEO용 키워드 메타 데이터 정의 (크롤러 수집용 구조화 데이터)
 mood_data = {
-    "🔥": {"meaning": "스트레스", "color": "#FF4C33"},
-    "😔": {"meaning": "우울", "color": "#607D8B"},
-    "🧠": {"meaning": "집중 필요", "color": "#F2A2C0"},
-    "🥳": {"meaning": "판타스틱", "color": "#FFD93B"},
-    "😴": {"meaning": "졸림", "color": "#9C27B0"},
-    "😤": {"meaning": "화남", "color": "#795548"},
-    "🥗": {"meaning": "다이어트 중", "color": "#4CAF50"},
-    "😭": {"meaning": "속상함", "color": "#2196F3"},
-    "😷": {"meaning": "감기 기운", "color": "#BDBDBD"},
-    "🤒": {"meaning": "열이 남", "color": "#FF5722"}
+    "🔥": {"meaning": "스트레스", "color": "#FF4C33", "desc": "매운 음식, 자극적인 맛집"},
+    "😔": {"meaning": "우울", "color": "#607D8B", "desc": "따뜻한 국물 요리, 위로가 되는 맛"},
+    "🧠": {"meaning": "집중 필요", "color": "#F2A2C0", "desc": "뇌 회전에 좋은 고단백 식단, 생선 요리"},
+    "🥳": {"meaning": "판타스틱", "color": "#FFD93B", "desc": "기분 좋은 날 가기 좋은 레스토랑, 고기 맛집"},
+    "😴": {"meaning": "졸림", "color": "#9C27B0", "desc": "잠을 깨워줄 상큼한 메뉴, 비타민 가득한 식사"},
+    "😤": {"meaning": "화남", "color": "#795548", "desc": "스트레스 해소용 씹는 맛이 있는 요리"},
+    "🥗": {"meaning": "다이어트 중", "color": "#4CAF50", "desc": "저칼로리 샐러드, 키토제닉 건강 식단"},
+    "😭": {"meaning": "속상함", "color": "#2196F3", "desc": "달콤하고 편안한 소울 푸드"},
+    "😷": {"meaning": "감기 기운", "color": "#BDBDBD", "desc": "면역력을 높여줄 뜨끈한 보양식, 삼계탕"},
+    "🥵": {"meaning": "열이 남", "color": "#FF5722", "desc": "시원한 냉면, 이열치열 매콤한 요리"}
 }
 
 # 2. 세션 상태 초기화
@@ -35,6 +40,8 @@ if 'disliked_foods' not in st.session_state:
     st.session_state.disliked_foods = []
 if 'current_mood' not in st.session_state:
     st.session_state.current_mood = None
+if 'current_budget' not in st.session_state:
+    st.session_state.current_budget = None 
 if 'recommendation_result' not in st.session_state:
     st.session_state.recommendation_result = None
 if 'recent_history' not in st.session_state:
@@ -68,12 +75,19 @@ apply_custom_style(st.session_state.bg_color)
 
 VALID_MODEL = "models/gemini-flash-latest"
 
-st.title("📍 실시간 위치 기반 메뉴 추천 🍱")
+# --- [SEO 최적화 1: 시맨틱 텍스트 타이틀 및 메타 설명] ---
+st.markdown("""
+    <h1>📍 실시간 위치 기반 내 주변 맛집 및 메뉴 추천 🍱</h1>
+    <p style='color: #888888; font-size: 16px;'>
+        Mood Food AI는 사용자의 <strong>실시간 GPS 좌표</strong>와 <strong>현재 심리 상태(기분)</strong>, 
+        그리고 <strong>예산 범위</strong>를 분석하여 도보 15분(1km) 이내의 검증된 실제 식당과 가성비 메뉴를 맞춤 추천하는 고도화된 웹 서비스입니다.
+    </p>
+""", unsafe_allow_html=True)
 
 # 4. 위치 설정 (사이드바)
 with st.sidebar:
     st.write("### 🌍 위치 설정")
-    manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요")
+    manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요", placeholder="예: 혜화역, 성균관대 정문")
     st.write("---")
     st.write("🛰️ 자동 GPS 감지")
     location = streamlit_geolocation()
@@ -94,7 +108,7 @@ with st.sidebar:
 # 5. 레이아웃 정의
 col1, col2 = st.columns([1, 1.2])
 
-# 6. 기분 버튼 섹션 (col1)
+# 6. 기분 및 버젯 버튼 섹션 (col1)
 with col1:
     st.subheader("지금 기분은 어떠신가요?")
     items = list(mood_data.items())
@@ -103,15 +117,31 @@ with col1:
         for j in range(5):
             idx = i * 5 + j
             if idx < len(items):
-                emoji, info = items[idx] # info로 데이터를 받습니다.
-                button_label = f"{emoji}\n{info['meaning']}" # 이모지 + 이름 결합
+                emoji, info = items[idx]
+                button_label = f"{emoji}\n{info['meaning']}"
                 
-                # 버튼 라벨에 button_label을 적용하고, 로직에서 info를 사용합니다.
                 if btn_cols[j].button(button_label, key=f"m_{idx}", use_container_width=True):
                     st.session_state.current_mood = info['meaning']
                     st.session_state.bg_color = info['color']
                     st.session_state.recommendation_result = None 
                     st.rerun()
+
+    st.write("")
+    st.subheader("💰 예산 범위를 선택해주세요")
+    budget_options = ["₩10,000 이하", "₩10,000-15,000", "₩15,000-20,000", "₩20,000+"]
+    budget_cols = st.columns(4)
+    
+    for b_idx, b_opt in enumerate(budget_options):
+        if budget_cols[b_idx].button(b_opt, key=f"b_{b_idx}", use_container_width=True):
+            st.session_state.current_budget = b_opt
+            st.session_state.recommendation_result = None
+            st.rerun()
+
+    status_text = []
+    if st.session_state.current_mood: status_text.append(f"기분: **{st.session_state.current_mood}**")
+    if st.session_state.current_budget: status_text.append(f"예산: **{st.session_state.current_budget}**")
+    if status_text:
+        st.info(" | ".join(status_text))
 
 # 7. 지도 표시 섹션 (col2)
 with col2:
@@ -121,29 +151,29 @@ with col2:
     st_folium(m, width=600, height=450, key="dynamic_map")
 
 # 8. 메뉴 추천 및 결과 표시 로직
-if st.session_state.current_mood:
+if st.session_state.current_mood and st.session_state.current_budget:
     mood = st.session_state.current_mood
+    budget = st.session_state.current_budget
     
     if st.session_state.recommendation_result is None:
-        with st.spinner(f"'{mood}'에 딱 맞는 1km 이내 맛집을 찾는 중..."):
+        with st.spinner(f"'{mood}'에 맞고 {budget} 이내인 1km 이내 맛집을 엔진에서 탐색 중..."):
             try:
                 avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
                 avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                 
                 model = genai.GenerativeModel(VALID_MODEL)
                 prompt = f"""
-                사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 **실제로 운영 중인 유명 식당**을 추천해줘.
+                사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 실제로 현재 운영 중인 유명 식당을 추천해줘.
+                
+                ⚠️ [필수 제약 규칙] ⚠️
+                1. **가격대 제한**: 추천하는 대표 메뉴의 가격은 반드시 사용자가 선택한 가격대 범위인 [{budget}] 내에 명확히 들어와야 해.
+                2. **실제 존재하는 식당**: 존재하지 않는 가짜 식당 이름은 절대 지어내지 마. 유명 프랜차이즈나 네이버 검색 검증 맛집을 골라줘.
 
-                ⚠️ [중요 규칙] ⚠️
-                1. **지어낸 이름 금지**: 학습 데이터상 확실히 존재하는 식당만 추천해. 만약 특정 식당이 불확실하다면, 해당 지역의 누구나 아는 '유명 체인점'이나 '랜드마크 맛집'을 추천해.
-                2. **정확한 명칭**: 네이버 지도나 구글 지도에서 검색했을 때 바로 나오는 정확한 식당 이름을 사용해.
-                3. **검색 확인**: 추천하는 식당이 {location_context} 근처에 있는지 공간적으로 다시 한번 확인해.
-                
-                형식: [정확한 식당이름 | 대표메뉴]
+                형식: [식당명 | 메뉴명]
                 기분: {mood}에 어울리는 음식
-                제외: [{avoid_str}]
+                제외 목록: [{avoid_str}]
                 
-                답변에 "이 식당은 현재 위치에서 어느 방향으로 몇 분 거리인지"와 "대표 메뉴의 특징"을 사실에 기반해서 설명해줘.
+                답변에는 선택한 메뉴의 대략적인 가격과 왜 이 예산 범위 내에서 최고의 선택인지, 그리고 현재 위치에서 도보로 몇 분 걸리는지 사실에 기반해서 다정하게 설명해줘.
                 """
                 
                 response = model.generate_content(prompt)
@@ -176,12 +206,12 @@ if st.session_state.current_mood:
         with col1:
             st.write("---")
             st.success(f"### 📍 {res['place']}")
-            st.info(f"🍴 **추천 메뉴:** {res['menu']}")
+            st.info(f"🍴 **추천 메뉴:** {res['menu']} ({budget})")
             st.warning(f"🏃‍♂️ **검색 위치에서 1km 이내 (도보 권장)**")
             st.write(res['full_text'])
             
             search_url = f"https://map.naver.com/v5/search/{location_context} {res['place']}"
-            st.link_button(f"🔗 {res['place']} 길찾기 & 거리 확인", search_url, use_container_width=True)
+            st.link_button(f"🔗 {res['place']} 길찾기 & 가격 확인", search_url, use_container_width=True)
             
             st.write("")
             f_col1, f_col2 = st.columns(2)
@@ -194,8 +224,36 @@ if st.session_state.current_mood:
                         st.session_state.disliked_foods.append(res['menu'])
                     st.session_state.recommendation_result = None 
                     st.rerun()
+                    
+elif st.session_state.current_mood or st.session_state.current_budget:
+    with col1:
+        st.info("💡 **기분**과 **예산 범위**를 모두 한 번씩 클릭하시면 AI가 맞춤 맛집 검색을 시작합니다!")
 
 # 9. 제외 리스트
 if st.session_state.disliked_foods:
     with st.expander("🚫 현재 제외된 메뉴 리스트"):
         st.write(", ".join(st.session_state.disliked_foods))
+
+# --- [SEO 최적화 2: 검색엔진 인덱싱용 하단 텍스트 가이드] ---
+st.write("---")
+st.markdown("## 🔍 Mood Food AI 서비스 안내 및 주요 키워드 가이드")
+seo_col1, seo_col2 = st.columns(2)
+
+with seo_col1:
+    st.markdown("""
+    ### 🎯 기분별 맞춤 음식 추천 키워드
+    우리 서비스는 심리학적 감정 상태에 매칭되는 푸드 테라피를 제공합니다.
+    * **스트레스 해소**: 화끈하게 매운 떡볶이, 닭발, 불짬뽕 전문 식당 매칭
+    * **우울할 때**: 마음을 채워주는 뜨끈한 국밥, 국수, 라멘 맛집 정보
+    * **직장인/학생 집중력 강화**: 견과류, 연어, 아보카도 기반의 브런치 및 고단백 웰빙 식단
+    * **다이어트 및 헬스 식단**: 주변에서 가장 가까운 가성비 샐러드 팩토리, 키토 김밥 전문점
+    """)
+
+with seo_col2:
+    st.markdown("""
+    ### 💰 지갑 사정을 고려한 합리적인 예산 필터
+    지역 구내식당 수준의 초가성비 혼밥부터 파인 다이닝까지 명확한 인덱스를 제공합니다.
+    * **1만원 이하**: 대학가 가성비 밥집, 분식, 간편식, 국밥 중심 추천
+    * **1만원 ~ 2만원 사이**: 일반적인 직장인 점심/저녁 맛집, 이탈리안 파스타, 일식 돈카츠
+    * **2만원 이상**: 특별한 날 기분 전환을 위한 고품격 다이닝, 스테이크, 오마카세 등
+    """)
