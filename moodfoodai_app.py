@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 import re
 import time
 from geopy.distance import geodesic
+import requests 
 
 # 1. 환경 설정, 기분별 색상 및 데이터 정의
 st.set_page_config(
@@ -14,6 +15,91 @@ st.set_page_config(
     page_icon="🍱"
 )
 
+GOOGLE_CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
+GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
+# 로컬 테스트 시에는 http://localhost:8501 , 배포 시에는 해당 도메인 입력
+REDIRECT_URI = "http://localhost:8501" 
+
+# 세션 상태 초기화 (로그인 여부 확인용)
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
+# --- 구글 인증 URL 생성 함수 ---
+def get_login_url():
+    base_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": REDIRECT_URI,
+        "response_type": "code",
+        "scope": "query https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+        "access_type": "offline"
+    }
+    # 딕셔너리를 URL 파라미터 문자열로 변환
+    url_params = "&".join([f"{k}={v}" for k, v in params.items()])
+    return f"{base_url}?{url_params}"
+
+# --- 인증 코드를 토큰 및 유저 정보로 교환하는 함수 ---
+def login_user(code):
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": REDIRECT_URI,
+        "grant_type": "authorization_code"
+    }
+    token_res = requests.post(token_url, data=data).json()
+    
+    if "access_token" in token_res:
+        access_token = token_res["access_token"]
+        # 유저 프로필 가져오기
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        user_info = requests.get(user_info_url, headers=headers).json()
+        return user_info
+    return None
+
+# --- 로그인 로직 체크 ---
+# 구글 로그인 후 돌아올 때 URL 파라미터에 ?code=... 가 붙습니다.
+query_params = st.query_params
+if "code" in query_params and not st.session_state.logged_in:
+    auth_code = query_params["code"]
+    user_data = login_user(auth_code)
+    if user_data:
+        st.session_state.logged_in = True
+        st.session_state.user_info = user_data
+        # URL 지저분한 파라미터 비우기
+        st.query_params.clear()
+        st.rerun()
+
+# --- 화면 렌더링 분기 ---
+if not st.session_state.logged_in:
+    # 로그인 안 되었을 때 화면
+    st.center()
+    st.write("# 🔐 Mood Food AI 서비스 이용 안내")
+    st.write("개인 맞춤형 식당 추천 및 제외 메뉴 기억 기능을 이용하시려면 구글 로그인이 필요합니다.")
+    
+    # 구글 로그인 버튼 디자인
+    login_url = get_login_url()
+    st.link_button("🚀 구글 계정으로 로그인하기", login_url, use_container_width=True)
+
+else:
+    # 로그인 성공 시 화면 (기존 서비스 코드 전체가 이 안으로 들어옵니다)
+    user = st.session_state.user_info
+    
+    # 사이드바 상단에 유저 프로필 표시
+    with st.sidebar:
+        st.write(f"### 👤 {user.get('name')}님 환영합니다!")
+        if user.get("picture"):
+            st.image(user.get("picture"), width=60)
+        
+        if st.button("로그아웃", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.user_info = None
+            st.rerun()
+            
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
