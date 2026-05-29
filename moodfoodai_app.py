@@ -7,6 +7,7 @@ import re
 import time
 from geopy.distance import geodesic
 import requests 
+import urllib.parse
 
 # 1. 환경 설정, 기분별 색상 및 데이터 정의
 st.set_page_config(
@@ -18,6 +19,7 @@ st.set_page_config(
 # 구글 세크리트 키 로드
 GOOGLE_CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
 GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
+
 REDIRECT_URI = "https://mood-food-ai-io.streamlit.app" 
 
 # 세션 상태 초기화 (로그인 여부 확인용)
@@ -25,12 +27,6 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_info" not in st.session_state:
     st.session_state.user_info = None
-
-# --- 구글 인증 URL 생성 함수 ---
-import urllib.parse # Put this at the top of your script with the other imports
-
-# 1. Update this to your real Cloud URL!
-REDIRECT_URI = "https://mood-food-ai-io.streamlit.app" 
 
 # --- 구글 인증 URL 생성 함수 ---
 def get_login_url():
