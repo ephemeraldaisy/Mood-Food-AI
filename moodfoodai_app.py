@@ -18,7 +18,7 @@ st.set_page_config(
 # 구글 세크리트 키 로드
 GOOGLE_CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
 GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
-REDIRECT_URI = "https://mood-food-ai-io.streamlit.app/" 
+REDIRECT_URI = "https://mood-food-ai-io.streamlit.app" 
 
 # 세션 상태 초기화 (로그인 여부 확인용)
 if "logged_in" not in st.session_state:
