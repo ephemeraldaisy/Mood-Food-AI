@@ -30,7 +30,7 @@ if "user_info" not in st.session_state:
 import urllib.parse # Put this at the top of your script with the other imports
 
 # 1. Update this to your real Cloud URL!
-REDIRECT_URI = "https://your-app-name.streamlit.app" 
+REDIRECT_URI = "https://mood-food-ai-io.streamlit.app/" 
 
 # --- 구글 인증 URL 생성 함수 ---
 def get_login_url():
