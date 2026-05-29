@@ -18,7 +18,7 @@ st.set_page_config(
 # 구글 세크리트 키 로드
 GOOGLE_CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
 GOOGLE_CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
-REDIRECT_URI = "http://localhost:8501" 
+REDIRECT_URI = "https://mood-food-ai-io.streamlit.app/" 
 
 # 세션 상태 초기화 (로그인 여부 확인용)
 if "logged_in" not in st.session_state:
@@ -27,16 +27,24 @@ if "user_info" not in st.session_state:
     st.session_state.user_info = None
 
 # --- 구글 인증 URL 생성 함수 ---
+import urllib.parse # Put this at the top of your script with the other imports
+
+# 1. Update this to your real Cloud URL!
+REDIRECT_URI = "https://your-app-name.streamlit.app" 
+
+# --- 구글 인증 URL 생성 함수 ---
 def get_login_url():
     base_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
         "response_type": "code",
-        "scope": "query https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+        # 'query' has been removed
+        "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
         "access_type": "offline"
     }
-    url_params = "&".join([f"{k}={v}" for k, v in params.items()])
+    # Using urllib is the safest way to format URLs with spaces in them
+    url_params = urllib.parse.urlencode(params)
     return f"{base_url}?{url_params}"
 
 # --- 인증 코드를 토큰 및 유저 정보로 교환하는 함수 ---
