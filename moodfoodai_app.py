@@ -7,6 +7,7 @@ import re
 import time
 from geopy.distance import geodesic
 import requests 
+from datetime import datetime 
 import urllib.parse
 
 # 1. 환경 설정, 기분별 색상 및 데이터 정의
@@ -283,9 +284,14 @@ else:
                     }
                     
                     full_rec = f"{place_name} - {menu_name}"
-                    if full_rec not in st.session_state.recent_history:
-                        st.session_state.recent_history.append(full_rec)
-                        if len(st.session_state.recent_history) > 5:
+
+                    is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
+                    
+                    if not is_duplicate:
+                        current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+                        st.session_state.recent_history.append({"item": full_rec, "date": current_time})
+                        
+                        if len(st.session_state.recent_history) > 10:
                             st.session_state.recent_history.pop(0)
                     
                 except Exception as e:
@@ -347,3 +353,28 @@ else:
         * **1만원 ~ 2만원 사이**: 일반적인 직장인 점심/저녁 맛집, 이탈리안 파스타, 일식 돈카츠
         * **2만원 이상**: 특별한 날 기분 전환을 위한 고품격 다이닝, 스테이크, 오마카세 등
         """)
+
+st.write("---")
+
+if 'show_history' not in st.session_state:
+    st.session_state.show_history = False
+
+if st.button("📜 View My History", use_container_width=True):
+    st.session_state.show_history = not st.session_state.show_history
+    st.rerun()
+
+if st.session_state.show_history:
+    st.markdown("### 🕰️ 나의 메뉴 추천 기록")
+    
+    if not st.session_state.recent_history:
+        st.info("아직 추천 받은 내역이 없습니다. 새로운 메뉴를 탐색해 보세요!")
+    else:
+        # 가장 최근에 추천받은 메뉴가 위로 오도록 역순(reversed)으로 출력
+        for history in reversed(st.session_state.recent_history):
+            # 새로 저장된 데이터(시간 포함)인 경우
+            if isinstance(history, dict):
+                st.markdown(f"- 🕒 **{history['date']}** 🍽️ `{history['item']}`")
+            # 만약 업데이트 전의 옛날 데이터(문자열)가 남아있을 경우의 에러 방지
+            else:
+                st.markdown(f"- 🕒 **[이전 기록]** 🍽️ `{history}`")
+    
