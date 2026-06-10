@@ -236,7 +236,7 @@ else:
 
     # 7. 지도 표시 섹션 (col2)
     with col2:
-        st.write("### 📍 내 주변 맛집 지도")
+        st.write("### 📍 내 주변 지도")
         m = folium.Map(location=[curr_lat, curr_lon], zoom_start=15)
         folium.Marker([curr_lat, curr_lon], popup="현재 위치", icon=folium.Icon(color='red')).add_to(m)
         st_folium(m, width=600, height=450, key="dynamic_map")
@@ -249,6 +249,8 @@ else:
         if st.session_state.recommendation_result is None:
             with st.spinner(f"'{mood}'에 맞고 {budget} 이내인 1km 이내 맛집을 엔진에서 탐색 중..."):
                 try:
+                    history_strings = [h["item"] if isinstance(h, dict) else h for h in st.session_state.recent_history]
+                    
                     avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
                     avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                     
