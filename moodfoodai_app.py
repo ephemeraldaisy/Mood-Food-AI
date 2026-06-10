@@ -251,16 +251,17 @@ else:
                 try:
                     history_strings = [h["item"] if isinstance(h, dict) else h for h in st.session_state.recent_history]
                     
-                    avoid_list = list(set(st.session_state.disliked_foods + st.session_state.recent_history))
+                    avoid_list = list(set(st.session_state.disliked_foods + history_strings))
                     avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                     
                     model = genai.GenerativeModel(VALID_MODEL)
+                    
                     prompt = f"""
-                    사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 실제로 현재 운영 중인 유명 식당을 추천해줘.
+                    사용자의 위치 '{location_context}'에서 '도보 15분(1km) 이내'에 있는 실제로 현재 운영 중인 식당을 추천해줘.
                     
                     ⚠️ [필수 제약 규칙] ⚠️
                     1. **가격대 제한**: 추천하는 대표 메뉴의 가격은 반드시 사용자가 선택한 가격대 범위인 [{budget}] 내에 명확히 들어와야 해.
-                    2. **실제 존재하는 식당**: 존재하지 않는 가짜 식당 이름은 절대 지어내지 마. 유명 프랜차이즈나 네이버 검색 검증 맛집을 골라줘.
+                    2. **실제 존재하는 식당**: 존재하지 않는 가짜 식당 이름은 절대 지어내지 마. 유명 프랜차이즈나 네이버 검색 검증 맛집을 골라줘. 네이버 지도 링크에 지점 이름을 넣어줘.
 
                     형식: [식당명 | 메뉴명]
                     기분: {mood}에 어울리는 음식
