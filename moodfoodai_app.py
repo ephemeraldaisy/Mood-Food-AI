@@ -292,7 +292,7 @@ else:
                 except Exception as e:
                     st.error(f"AI 응답 오류: {e}")
 
-                    full_rec = f"{res['place']} - {res['menu']}"
+                    '''full_rec = f"{res['place']} - {res['menu']}"
 
                     is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
                     
@@ -304,7 +304,7 @@ else:
                             st.session_state.recent_history.pop(0)
                     
                 except Exception as e:
-                    st.error(f"AI 응답 오류: {e}")
+                    st.error(f"AI 응답 오류: {e}")'''
 
         if st.session_state.recommendation_result:
             res = st.session_state.recommendation_result
