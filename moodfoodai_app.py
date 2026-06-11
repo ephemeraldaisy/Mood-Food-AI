@@ -137,6 +137,8 @@ else:
         st.session_state.recommendation_result = None
     if 'recent_history' not in st.session_state:
         st.session_state.recent_history = [] 
+    if 'feedback_given' not in st.session_state:
+        st.session_state.feedback_given = False 
 
     # 3. 스타일 설정 함수
     def apply_custom_style(hex_code):
@@ -285,6 +287,12 @@ else:
                         "menu": menu_name,
                         "full_text": res_text
                     }
+                    st.session_state.feedback_given = False 
+
+                except Exception as e:
+                    st.error(f"AI 응답 오류: {e}")
+
+                    
                     
                     full_rec = f"{place_name} - {menu_name}"
 
@@ -311,16 +319,44 @@ else:
                 
                 search_url = f"https://map.naver.com/v5/search/{location_context} {res['place']}"
                 st.link_button(f"🔗 {res['place']} 길찾기 & 가격 확인", search_url, use_container_width=True)
-                
+
+                #피드백 강제 
                 st.write("")
+                st.error("🚨 **다음 추천을 받으려면 반드시 아래 피드백 버튼 중 하나를 선택해 주세요!**")
+                
                 f_col1, f_col2 = st.columns(2)
                 with f_col1:
                     if st.button("👍 좋아요", use_container_width=True):
+                        full_rec = f"{res['place']} - {res['menu']}"
+
+                        #기록에 추가
+                        is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
+                        if not is_duplicate:
+                            current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            st.session_state.recent_history.append({"item": full_rec, "date": current_time})
+                            if len(st.session_state.recent_history) > 10:
+                                st.session_state.recent_history.pop(0)
+                        
                         st.toast(f"취향 저격! {res['menu']} 메모 완료! ✨", icon="😍")
+
+                        #상태 리셋 
+                        st.session_state.feedback_given = True
+                        st.session_state.current_mood = None
+                        st.session_state.current_budget = None
+                        st.session_state.recommendation_result = None
+                        st.rerun()
+
+                
                 with f_col2:
                     if st.button("👎 싫어요", use_container_width=True):
                         if res['menu'] not in st.session_state.disliked_foods:
                             st.session_state.disliked_foods.append(res['menu'])
+
+                        st.toast("알겠습니다! 다음부터는 제외할게요.", icon="🚫")
+                        #상태 리셋
+                        st.session_state.feedback_given = True
+                        st.session_state.current_mood = None
+                        st.session_state.current_budget = None
                         st.session_state.recommendation_result = None 
                         st.rerun()
                         
