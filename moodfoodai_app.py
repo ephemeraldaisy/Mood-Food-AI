@@ -36,11 +36,9 @@ def get_login_url():
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
         "response_type": "code",
-        # 'query' has been removed
         "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
         "access_type": "offline"
     }
-    # Using urllib is the safest way to format URLs with spaces in them
     url_params = urllib.parse.urlencode(params)
     return f"{base_url}?{url_params}"
 
@@ -77,7 +75,6 @@ if "code" in query_params and not st.session_state.logged_in:
 
 # --- 화면 렌더링 분기 ---
 if not st.session_state.logged_in:
-    # [에러 수정] 존재하지 않는 st.center()를 제거하고 마크다운 레이아웃으로 중앙 정렬 효과 적용
     st.markdown("""
         <div style="text-align: center; padding: 50px 0;">
             <h1>🔐 Mood Food AI 서비스 이용 안내</h1>
@@ -85,15 +82,13 @@ if not st.session_state.logged_in:
         </div>
     """, unsafe_allow_html=True)
     
-    # 구글 로그인 버튼 디자인
     login_url = get_login_url()
     st.link_button("🚀 구글 계정으로 로그인하기", login_url, use_container_width=True)
 
 else:
-    # [구조 교정] 로그인에 성공했을 때만 아래 모든 서비스 로직이 돌아가도록 else 블록 내에 배치합니다.
+    # 로그인 성공 시 렌더링 영역
     user = st.session_state.user_info
     
-    # 사이드바 상단에 유저 프로필 표시 및 로그아웃 기능
     with st.sidebar:
         st.write(f"### 👤 {user.get('name')}님 환영합니다!")
         if user.get("picture"):
@@ -104,13 +99,11 @@ else:
             st.session_state.user_info = None
             st.rerun()
             
-    # GEMINI API 설정 확인
     if "GEMINI_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     else:
         st.error("Streamlit Cloud 설정에서 GEMINI_API_KEY를 입력해주세요.")
 
-    # SEO용 키워드 메타 데이터 정의
     mood_data = {
         "🔥": {"meaning": "스트레스", "color": "#FF4C33", "desc": "매운 음식, 자극적인 맛집"},
         "😔": {"meaning": "우울", "color": "#607D8B", "desc": "따뜻한 국물 요리, 위로가 되는 맛"},
@@ -124,7 +117,6 @@ else:
         "🥵": {"meaning": "열이 남", "color": "#FF5722", "desc": "시원한 냉면, 이열치열 매콤한 요리"}
     }
 
-    # 2. 세션 상태 초기화
     if 'bg_color' not in st.session_state:
         st.session_state.bg_color = "#0E1117" 
     if 'disliked_foods' not in st.session_state:
@@ -140,7 +132,6 @@ else:
     if 'feedback_given' not in st.session_state:
         st.session_state.feedback_given = False 
 
-    # 3. 스타일 설정 함수
     def apply_custom_style(hex_code):
         st.markdown(f"""
             <style>
@@ -168,7 +159,6 @@ else:
 
     VALID_MODEL = "models/gemini-flash-latest"
 
-    # --- [SEO 최적화 1: 시맨틱 텍스트 타이틀 및 메타 설명] ---
     st.markdown("""
         <h1>📍 실시간 위치 기반 내 주변 맛집 및 메뉴 추천 🍱</h1>
         <p style='color: #888888; font-size: 16px;'>
@@ -177,7 +167,6 @@ else:
         </p>
     """, unsafe_allow_html=True)
 
-    # 4. 위치 설정 (사이드바)
     with st.sidebar:
         st.write("### 🌍 위치 설정")
         manual_address = st.text_input("📍 현재 위치가 다른가요? 직접 입력하세요", placeholder="예: 혜화역, 성균관대 정문")
@@ -198,10 +187,8 @@ else:
             location_context = "성균관대 자연과학캠퍼스 근처"
             st.warning("위치를 입력하거나 GPS를 허용해주세요.")
 
-    # 5. 레이아웃 정의
     col1, col2 = st.columns([1, 1.2])
 
-    # 6. 기분 및 버젯 버튼 섹션 (col1)
     with col1:
         st.subheader("지금 기분은 어떠신가요?")
         items = list(mood_data.items())
@@ -236,14 +223,12 @@ else:
         if status_text:
             st.info(" | ".join(status_text))
 
-    # 7. 지도 표시 섹션 (col2)
     with col2:
         st.write("### 📍 내 주변 지도")
         m = folium.Map(location=[curr_lat, curr_lon], zoom_start=15)
         folium.Marker([curr_lat, curr_lon], popup="현재 위치", icon=folium.Icon(color='red')).add_to(m)
         st_folium(m, width=600, height=450, key="dynamic_map")
 
-    # 8. 메뉴 추천 및 결과 표시 로직
     if st.session_state.current_mood and st.session_state.current_budget:
         mood = st.session_state.current_mood
         budget = st.session_state.current_budget
@@ -252,7 +237,6 @@ else:
             with st.spinner(f"'{mood}'에 맞고 {budget} 이내인 1km 이내 맛집을 엔진에서 탐색 중..."):
                 try:
                     history_strings = [h["item"] if isinstance(h, dict) else h for h in st.session_state.recent_history]
-                    
                     avoid_list = list(set(st.session_state.disliked_foods + history_strings))
                     avoid_str = ", ".join(avoid_list) if avoid_list else "없음"
                     
@@ -292,20 +276,6 @@ else:
                 except Exception as e:
                     st.error(f"AI 응답 오류: {e}")
 
-                    '''full_rec = f"{res['place']} - {res['menu']}"
-
-                    is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
-                    
-                    if not is_duplicate:
-                        current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-                        st.session_state.recent_history.append({"item": full_rec, "date": current_time})
-                        
-                        if len(st.session_state.recent_history) > 10:
-                            st.session_state.recent_history.pop(0)
-                    
-                except Exception as e:
-                    st.error(f"AI 응답 오류: {e}")'''
-
         if st.session_state.recommendation_result:
             res = st.session_state.recommendation_result
             with col1:
@@ -318,7 +288,6 @@ else:
                 search_url = f"https://map.naver.com/v5/search/{location_context} {res['place']}"
                 st.link_button(f"🔗 {res['place']} 길찾기 & 가격 확인", search_url, use_container_width=True)
 
-                #피드백 강제 
                 st.write("")
                 st.error("🚨 **다음 추천을 받으려면 반드시 아래 피드백 버튼 중 하나를 선택해 주세요!**")
                 
@@ -327,7 +296,6 @@ else:
                     if st.button("👍 좋아요", use_container_width=True):
                         full_rec = f"{res['place']} - {res['menu']}"
 
-                        #기록에 추가
                         is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
                         if not is_duplicate:
                             current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -337,13 +305,11 @@ else:
                         
                         st.toast(f"취향 저격! {res['menu']} 메모 완료! ✨", icon="😍")
 
-                        #상태 리셋 
                         st.session_state.feedback_given = True
                         st.session_state.current_mood = None
                         st.session_state.current_budget = None
                         st.session_state.recommendation_result = None
                         st.rerun()
-
                 
                 with f_col2:
                     if st.button("👎 싫어요", use_container_width=True):
@@ -351,7 +317,7 @@ else:
                             st.session_state.disliked_foods.append(res['menu'])
 
                         st.toast("알겠습니다! 다음부터는 제외할게요.", icon="🚫")
-                        #상태 리셋
+                        
                         st.session_state.feedback_given = True
                         st.session_state.current_mood = None
                         st.session_state.current_budget = None
@@ -362,12 +328,10 @@ else:
         with col1:
             st.info("💡 **기분**과 **예산 범위**를 모두 한 번씩 클릭하시면 AI가 맞춤 맛집 검색을 시작합니다!")
 
-    # 9. 제외 리스트
     if st.session_state.disliked_foods:
         with st.expander("🚫 현재 제외된 메뉴 리스트"):
             st.write(", ".join(st.session_state.disliked_foods))
 
-    # --- [SEO 최적화 2: 검색엔진 인덱싱용 하단 텍스트 가이드] ---
     st.write("---")
     st.markdown("## 🔍 Mood Food AI 서비스 안내 및 주요 키워드 가이드")
     seo_col1, seo_col2 = st.columns(2)
@@ -391,27 +355,24 @@ else:
         * **2만원 이상**: 특별한 날 기분 전환을 위한 고품격 다이닝, 스테이크, 오마카세 등
         """)
 
-st.write("---")
+    # --- [수정 완료] History 섹션을 로그인(else) 내부로 안전하게 이동했습니다 ---
+    st.write("---")
 
-if 'show_history' not in st.session_state:
-    st.session_state.show_history = False
+    if 'show_history' not in st.session_state:
+        st.session_state.show_history = False
 
-if st.button("📜 View My History", use_container_width=True):
-    st.session_state.show_history = not st.session_state.show_history
-    st.rerun()
+    if st.button("📜 View My History", use_container_width=True):
+        st.session_state.show_history = not st.session_state.show_history
+        st.rerun()
 
-if st.session_state.show_history:
-    st.markdown("### 🕰️ 나의 메뉴 추천 기록")
-    
-    if not st.session_state.recent_history:
-        st.info("아직 추천 받은 내역이 없습니다. 새로운 메뉴를 탐색해 보세요!")
-    else:
-        # 가장 최근에 추천받은 메뉴가 위로 오도록 역순(reversed)으로 출력
-        for history in reversed(st.session_state.recent_history):
-            # 새로 저장된 데이터(시간 포함)인 경우
-            if isinstance(history, dict):
-                st.markdown(f"- 🕒 **{history['date']}** 🍽️ `{history['item']}`")
-            # 만약 업데이트 전의 옛날 데이터(문자열)가 남아있을 경우의 에러 방지
-            else:
-                st.markdown(f"- 🕒 **[이전 기록]** 🍽️ `{history}`")
-    
+    if st.session_state.show_history:
+        st.markdown("### 🕰️ 나의 메뉴 추천 기록")
+        
+        if not st.session_state.recent_history:
+            st.info("아직 추천 받은 내역이 없습니다. 새로운 메뉴를 탐색해 보세요!")
+        else:
+            for history in reversed(st.session_state.recent_history):
+                if isinstance(history, dict):
+                    st.markdown(f"- 🕒 **{history['date']}** 🍽️ `{history['item']}`")
+                else:
+                    st.markdown(f"- 🕒 **[이전 기록]** 🍽️ `{history}`")
