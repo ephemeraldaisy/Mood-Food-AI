@@ -292,9 +292,7 @@ else:
                 except Exception as e:
                     st.error(f"AI 응답 오류: {e}")
 
-                    
-                    
-                    full_rec = f"{place_name} - {menu_name}"
+                    full_rec = f"{res['place']} - {res['menu']}"
 
                     is_duplicate = any(isinstance(h, dict) and h.get("item") == full_rec for h in st.session_state.recent_history)
                     
